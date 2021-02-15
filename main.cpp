@@ -4,12 +4,13 @@
 #include <time.h>
 #include <iostream>
 #include <mpi.h>
+#include <iomanip>
 // Defines precision for x and y values. More the interval, more the number of significant digits 
-#define INTERVAL 1000
-#define ANALYZE_INTERVAL 10*INTERVAL 
+#define INTERVAL 10000
+#define ANALYZE_INTERVAL 100*INTERVAL 
 using namespace std;
 
-void monteCarlo(long int &circlePoints,long int &nonCirclePoints){
+void monteCarlo(long int &circlePoints){
 	double rand_x, rand_y, origin_dist;
 // Randomly generated x and y values 
 	rand_x = double(rand() % (INTERVAL + 1)) / INTERVAL;
@@ -19,10 +20,6 @@ void monteCarlo(long int &circlePoints,long int &nonCirclePoints){
 //Checking if the point is in the cu=ircle
         if (origin_dist <= 1){
         	circlePoints++;
-	}
-	else
-	{
-		nonCirclePoints++;
 	}
 }
 
@@ -54,22 +51,21 @@ int main()
   	printf("Processor %s, rank %d\n",processor_name, world_rank);
 	double pi;
     	long int circle_points = 0;
-	long int nonCirclePoints=0;
-    	srand(time(NULL)); // initialize random seed
+    	srand(time(NULL)+world_rank); // initialize random seed
 
     // Total Random numbers generated = possible x values * possible y values 
     	for (long int i = 0; i < (INTERVAL * INTERVAL); i++) {
 
-		monteCarlo(circle_points,nonCirclePoints);	
-        	pi = double(4 * circle_points) / nonCirclePoints;// estimated pi after this iteration
+		monteCarlo(circle_points);	
+        	pi = double(4 * circle_points) / (i+1);// estimated pi after this iteration
         	if (i%ANALYZE_INTERVAL ==0) {
             		analyzeVariance(pi);
-			cout <<"circlepoints: "<< circle_points <<" outside circle points:" << nonCirclePoints << " - " << pi << endl << endl;
+			//cout <<"circlepoints: "<< circle_points <<" total points:" << i+1 << " - " << pi << endl << endl;
         	}
     	}	
-    	cout <<"MPI Rank: "<<world_rank<< " estimation of Pi = " << pi; // Final Estimated Value
+    	cout <<"MPI Rank: "<<world_rank<< " estimation of Pi = " << pi<<endl; // Final Estimated Value
 
-	long int pointPair[2]= {circle_points,nonCirclePoints};
+	long int pointPair[2]= {circle_points,INTERVAL * INTERVAL};
 	long int *pointPairs=NULL;
 	if(world_rank ==0){
 		pointPairs = new long int[world_size*2];
@@ -77,14 +73,14 @@ int main()
 	MPI_Gather(pointPair,2,MPI_LONG,pointPairs,2,MPI_LONG,0,MPI_COMM_WORLD);
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(world_rank==0){
-		int circPointTotal=0;
-		int nonCircPointTotal=0;
+		long int circPointTotal=0;
+		long int pointsTotal=0;
 		for(int i =0;i< world_size;++i){
 			circPointTotal= pointPairs[i*2] + circPointTotal;
-			nonCirclePoints=pointPairs[i*2+1] + nonCirclePoints;
+			pointsTotal=pointPairs[i*2+1] + pointsTotal;
 		}
-	        pi=4*circPointTotal/nonCirclePoints;
-        	cout<<"Agregated estimation: "<<pi<<endl;
+	        pi=double(4*circPointTotal)/pointsTotal;
+        	cout<< setprecision (9)<<"Aggregated estimation: "<<pi<<endl;
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize();
