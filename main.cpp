@@ -59,7 +59,7 @@ int main()
 		monteCarlo(circle_points);	
         	pi = double(4 * circle_points) / (i+1);// estimated pi after this iteration
         	if (i%ANALYZE_INTERVAL ==0) {
-            		analyzeVariance(pi);
+            		//analyzeVariance(pi);
 			//cout <<"circlepoints: "<< circle_points <<" total points:" << i+1 << " - " << pi << endl << endl;
         	}
     	}	
@@ -71,6 +71,7 @@ int main()
 		pointPairs = new long int[world_size*2];
 	}
 	MPI_Gather(pointPair,2,MPI_LONG,pointPairs,2,MPI_LONG,0,MPI_COMM_WORLD);
+
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(world_rank==0){
 		long int circPointTotal=0;
